@@ -1,0 +1,14 @@
+torch
+transformers
+bitsandbytes
+accelerate
+sqlparse
+pandas
+numpy
+duckdb
+streamlit
+plotly
+pyyaml
+sqlglot
+pyarrow
+boto3
