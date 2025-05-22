@@ -9,12 +9,16 @@ dist/
 
 # ignore data file 
 */data/
+*/downloads/
 
 #ignore keys
 keys
 
 #ignore logs
 */logs/
+
+#conf folder
+/conf/*
 
 # Compiled Java class files
 *.class
