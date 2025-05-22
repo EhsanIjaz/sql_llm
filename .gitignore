@@ -9,7 +9,7 @@ dist/
 
 # ignore data file 
 */data/
-*/downloads/
+*/downloads/data
 
 #ignore keys
 keys
