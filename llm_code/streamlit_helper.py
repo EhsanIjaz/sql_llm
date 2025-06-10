@@ -9,10 +9,10 @@ from sqlglot import parse_one, exp
 from datetime import datetime
 from typing import Generator, Tuple, List
 from .settings import *
-from aisight_llm.common_utils.logging import logger
-from aisight_llm.sql_gen_and_exec import generate_sql, execute_sql
-from aisight_llm.prompts.prompts import prompt
-from aisight_llm.data_processor_and_loader import latest_month_year, data_loader
+from .common_utils.logging import logger
+from .sql_gen_and_exec import generate_sql, execute_sql, generate_sql_chat
+from .prompts.prompts import prompt
+from .data_processor_and_loader import latest_month_year, data_loader
 
 
 # Session State Initialization
@@ -578,7 +578,7 @@ def get_why_result(result_df):
         return pd.DataFrame()
 
     why_question = f"Strictly retrieve only the following aggregates: SUM(mro) AS total_mro, SUM(unproductive_mro) AS total_unproductive_mro, SUM(unassorted_mro) AS total_unassorted_mro, SUM(stockout_mro) AS total_stockout_mro, should be based on the filtered data, also utilize SELECT and GROUP BY as defined below. The column is {last_col} with values are {last_col_values}, for the month {month} and year {year}."
-    why_sql = generate_sql(why_question, latest_month=LATEST_MONTH, latest_year=LATEST_YEAR, prompt=prompt)
+    why_sql = generate_sql_chat(why_question, latest_month=LATEST_MONTH, latest_year=LATEST_YEAR, prompt=prompt)
     logger.info(f"This is WHY SQL : \n{why_sql}")
 
     try:

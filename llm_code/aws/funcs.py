@@ -2,7 +2,7 @@ from pathlib import Path
 
 from .repository import *
 from ..settings.project import *
-from aisight_llm.common_utils.logging import logger
+from ..common_utils.logging import logger
 
 
 def upload_file_to_s3bucket(

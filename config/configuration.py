@@ -6,6 +6,8 @@ from google.oauth2.service_account import Credentials
 
 
 from constants import DEFAULT_ENV_VARS_PATH, DRIVE_AUTH_ACCESS, SPREADSHEET_ACCESS, FILE_ACCESS
+from constants import DEFAULT_ENV_VARS_PATH, DRIVE_AUTH_ACCESS, SPREADSHEET_ACCESS
+
 
 
 class EnvConfig:
@@ -26,6 +28,7 @@ class GoogleDriveAuth:
     def __init__(self, creds_path : Path):
         self.creds_path = creds_path
         self.scopes = [DRIVE_AUTH_ACCESS, SPREADSHEET_ACCESS, FILE_ACCESS]
+        self.scopes = [DRIVE_AUTH_ACCESS, SPREADSHEET_ACCESS]
         self.credentials = Credentials.from_service_account_file(
             creds_path,
             scopes=self.scopes

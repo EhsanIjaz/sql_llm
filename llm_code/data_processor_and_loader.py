@@ -10,7 +10,8 @@ from typing import Tuple
 from .aws.funcs import *
 from .settings import *
 from .settings.data import COLUMNS_MAP
-from aisight_llm.common_utils.logging import logger
+from .common_utils.logging import logger
+from .utils.decorators import time_checker
 
 # Configure display options
 pd.options.display.float_format = "{:,.2f}".format
@@ -109,6 +110,7 @@ def latest_file(path: Path, pattern: str = "*"):
 
 
 @st.cache_data(show_spinner=False)
+@time_checker
 def data_loader() -> pd.DataFrame:
     """Load data with caching mechanism using PyArrow format."""
     DATA_FILE = None

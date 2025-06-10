@@ -5,13 +5,19 @@ from boto3.s3.transfer import TransferConfig
 from botocore.exceptions import ClientError
 import os
 import glob
+from dotenv import load_dotenv
+from constants import DEFAULT_ENV_VARS_PATH
 
 from ..settings.aws import *
 
+
+load_dotenv(DEFAULT_ENV_VARS_PATH)
+AWS_LLM_BUCKET = os.getenv("AWS_LLM_BUCKET")
+
 s3_client = boto3.client(
     "s3",
-    aws_access_key_id=AWS_SERVER_PUBLIC_KEY,
-    aws_secret_access_key=AWS_SERVER_SECRET_KEY,
+    aws_access_key_id=os.getenv("AWS_SERVER_PUBLIC_KEY"),
+    aws_secret_access_key=os.getenv("AWS_SERVER_SECRET_KEY"),
 )
 
 
