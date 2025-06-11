@@ -1,8 +1,8 @@
 from pathlib import Path
 
-from .repository import *
-from ..settings.project import *
-from ..common_utils.logging import logger
+from config.aws_configuration import AWSConfig
+from constants import *
+from common_utils.logging import logger
 
 
 def upload_file_to_s3bucket(
@@ -30,7 +30,7 @@ def upload_file_to_s3bucket(
         logger.info(f"Local File Path: {local_file.as_posix()}")
         logger.info(f"Remote File Path: {remote_filepath.as_posix()}")
 
-        if upload_file(remote_path=remote_filepath, local_path=local_file):
+        if AWSConfig.upload_file(remote_path=remote_filepath, local_path=local_file):
             logger.info("File Upload Status: SUCCESS")
         else:
             logger.info("File Upload Status: FAILED")
@@ -41,7 +41,7 @@ def download_file_from_s3bucket(
     country: str,
     city: str,
     remote_path: Path | None = None,
-    save_path: Path = AWS_DOWNLOAD_PATH,
+    save_path: Path = DOWNLOADS_PATH,
 ):
     if not save_path.exists():
         # create save directory as per the path mentioned
@@ -56,7 +56,7 @@ def download_file_from_s3bucket(
         )
 
         # last added remote path is considered as path to remote file
-        if last_added_remote_file := get_last_added_remote_file(
+        if last_added_remote_file := AWSConfig.get_last_added_remote_file(
             remote_path=remote_directory
         ):
             last_added_remote_file: Path = Path(last_added_remote_file)
@@ -65,7 +65,7 @@ def download_file_from_s3bucket(
             logger.info(f"Remote File Path: {last_added_remote_file.as_posix()}")
             logger.info(f"Local File Path: {save_path.as_posix()}")
 
-            if downlaod_file(local_path=save_path, remote_path=last_added_remote_file):
+            if AWSConfig.downlaod_file(local_path=save_path, remote_path=last_added_remote_file):
                 logger.info("File Download Status: SUCCESS")
                 return save_path
             else:
@@ -86,7 +86,7 @@ def list_files_in_s3bucket(
             .joinpath(REMOTE_DEFAULT_DATA_DIRECTORY)
         )
 
-    return list_files(remote_path=remote_directory)
+    return AWSConfig.list_files(remote_path=remote_directory)
 
 
 def isin_s3bucket(filename: Path, company: str, country: str, city: str):

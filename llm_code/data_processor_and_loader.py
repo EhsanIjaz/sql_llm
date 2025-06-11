@@ -7,11 +7,10 @@ from pathlib import Path
 from typing import Tuple
 
 
-from .aws.funcs import *
-from .settings import *
-from .settings.data import COLUMNS_MAP
-from .common_utils.logging import logger
-from .utils.decorators import time_checker
+from functions.aws_funcs import *
+from constants import *
+from common_utils.logging import logger
+from decorators import time_checker
 
 # Configure display options
 pd.options.display.float_format = "{:,.2f}".format
@@ -116,13 +115,13 @@ def data_loader() -> pd.DataFrame:
     DATA_FILE = None
 
     # Step 1: Check cached directory first
-    cached_latest = latest_file(cached_dir)
+    cached_latest = latest_file(CACHED_PATH)
     if cached_latest:
         DATA_FILE = cached_latest
         logger.info(f"Cached file exists: {DATA_FILE}")
 
     # Step 2: Check from the download directory
-    elif download_latest := latest_file(download_dir):
+    elif download_latest := latest_file(DOWNLOADS_PATH):
         DATA_FILE = download_latest
         logger.info(f"File exists in Download directory: {DATA_FILE}")
 
@@ -135,10 +134,10 @@ def data_loader() -> pd.DataFrame:
 
     # Step 4: If file not in S3, check upload directory and upload it
     if DATA_FILE is None:
-        upload_latest = latest_file(upload_dir)
+        upload_latest = latest_file(UPLOADS_PATH)
         if upload_latest:
             upload_from_local(upload_latest)  # Upload to S3
-            DATA_FILE = latest_file(download_dir)  # Get the latest downloaded file
+            DATA_FILE = latest_file(DOWNLOADS_PATH)  # Get the latest downloaded file
             logger.info(f"File uploaded from Upload directory: {DATA_FILE}")
 
     # Step 5: Processed if the data file
@@ -149,7 +148,7 @@ def data_loader() -> pd.DataFrame:
         elif DATA_FILE.suffix == ".gz":
             logger.info("Processing and caching new data")
             df = load_and_process(DATA_FILE)
-            cache_filename = cached_dir.joinpath(f"{DATA_FILE.stem}.arrow")
+            cache_filename = CACHED_PATH.joinpath(f"{DATA_FILE.stem}.arrow")
             df.to_parquet(cache_filename, compression="snappy")
             return df
     else:
@@ -157,6 +156,6 @@ def data_loader() -> pd.DataFrame:
         raise FileNotFoundError("No valid file found in any directory!")
 
     # **Step 7: Cleanup old files to ensure only one file per directory**
-    enforce_single_file(cached_dir)
-    enforce_single_file(download_dir)
-    enforce_single_file(upload_dir)
+    enforce_single_file(CACHED_PATH)
+    enforce_single_file(DOWNLOADS_PATH)
+    enforce_single_file(UPLOADS_PATH)

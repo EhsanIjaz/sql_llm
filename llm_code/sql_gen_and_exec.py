@@ -10,11 +10,11 @@ from dotenv import load_dotenv
 
 # openai.api_key = 
 
-from .utils.decorators import time_checker
+
+from decorators import time_checker
 from transformers import AutoTokenizer, AutoModelForCausalLM
-from .common_utils.logging import logger
-from constants import DEFAULT_ENV_VARS_PATH
-from .settings import MODEL_NAME, MODEL_CHACHED_DIR
+from common_utils.logging import logger
+from constants import *
 
 logger.info(f"Initialized Model : {MODEL_NAME} ")
 DEVICE = "cuda" if torch.cuda.is_available() else "cpu"

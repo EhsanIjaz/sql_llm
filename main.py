@@ -1,8 +1,8 @@
 # from helper import g_auth_client
 
 
-from functions.gfunc import get_sheet, get_folder
-from constants import SHEET_KEY, FOLDER_KEY, DOWNLOAD_PATH
+from functions.gdrive_funcs import get_sheet, get_latest_file
+from constants import *
 import pandas as pd
 
 
@@ -14,7 +14,7 @@ if __name__ == "__main__":
     # df = pd.DataFrame(sheet)
     # print(df.head(2))
 
-    data = get_folder(folder_key = FOLDER_KEY , download_path= DOWNLOAD_PATH)
+    data = get_latest_file(folder_key = FOLDER_KEY , download_path= DOWNLOADS_PATH)
     
 
     # sheet = client.open("Iamhaut_RnD_Results")
@@ -23,17 +23,17 @@ if __name__ == "__main__":
 # 1X4LJMxPokd0wmU1AojmrlhmVpWRV7Ywh
 # from helper import g_auth_client
 
-from functions.gfunc import get_sheet, get_folder
-from constants import SHEET_KEY, FOLDER_KEY, DOWNLOAD_PATH
+from functions.gdrive_funcs import get_sheet, get_latest_file
+from constants import SHEET_KEY, FOLDER_KEY, DOWNLOADS_PATH
 import pandas as pd
 
 
 
-from functions.gfunc import get_sheet, get_files 
-from constants import SHEET_KEY, FOLDER_KEY, DOWNLOAD_PATH
+from functions.gdrive_funcs import get_sheet, get_folder 
+from constants import SHEET_KEY, FOLDER_KEY, DOWNLOADS_PATH
 import pandas as pd
-from functions.dataloader import clean_and_rename_file, latest_file, get_files
-from constants.data_costant import *
+from functions.dataloader import clean_and_rename_file, latest_file, get_latest_file
+from constants.data_paths import *
 
 
 
@@ -44,22 +44,22 @@ if __name__ == "__main__":
     # print(df.head(2))
 
 
-    data = get_folder(folder_key = FOLDER_KEY , download_path= DOWNLOAD_PATH)
+    data = get_folder(folder_key = FOLDER_KEY , download_path= DOWNLOADS_PATH)
 
     # get the data 
-    # data = get_files(folder_key = FOLDER_KEY , download_path= DOWNLOAD_PATH)
+    # data = get_latest_file(folder_key = FOLDER_KEY , download_path= DOWNLOADS_PATH)
     
     # #clean the folder and load
-    # file = clean_and_rename_file(DOWNLOAD_PATH)
+    # file = clean_and_rename_file(DOWNLOADS_PATH)
    
    
-    print("the download path",DOWNLOAD_DIR)
-    a = get_files(DOWNLOAD_DIR)
-    b = latest_file(DOWNLOAD_DIR)
+    print("the download path",DOWNLOADS_PATH)
+    a = get_latest_file(DOWNLOADS_PATH)
+    b = latest_file(DOWNLOADS_PATH)
     print(a)
     print(b)
     # print(SCRIPT_DIR)
-    # latest_file_1 = latest_file(DOWNLOAD_PATH)
+    # latest_file_1 = latest_file(DOWNLOADS_PATH)
 
 
     # sheet = client.open("Iamhaut_RnD_Results")

@@ -8,8 +8,9 @@ import plotly.express as px
 from sqlglot import parse_one, exp
 from datetime import datetime
 from typing import Generator, Tuple, List
-from .settings import *
-from .common_utils.logging import logger
+from constants import MAX_HISTORY_LENGTH, LETTER_LIMIT
+from constants import *
+from common_utils.logging import logger
 from .sql_gen_and_exec import generate_sql, execute_sql, generate_sql_chat
 from .prompts.prompts import prompt
 from .data_processor_and_loader import latest_month_year, data_loader

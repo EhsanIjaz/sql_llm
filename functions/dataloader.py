@@ -9,7 +9,7 @@
 # # import str
 
 
-# def get_files(path: Path, pattern: str = "*"):
+# def get_latest_file(path: Path, pattern: str = "*"):
 #     files_list = list(path.glob(pattern))
 
 #     if not files_list:
@@ -21,7 +21,7 @@
 
 # def clean_and_rename_file(path: Path):
 
-#     sorted_file_list = get_files(path)
+#     sorted_file_list = get_latest_file(path)
 
 #     for index, file_path in enumerate(sorted_file_list):
 #         file_ext = os.path.splitext(file_path)[1]
@@ -36,7 +36,7 @@
 
 # def keep_latest_5_files(path: Path):
 
-#     sorted_file_list = get_files(path)
+#     sorted_file_list = get_latest_file(path)
 
 #     if len(sorted_file_list) <= 5:
 #         return

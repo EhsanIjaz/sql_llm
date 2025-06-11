@@ -2,11 +2,11 @@ import os
 import logging
 from logging.handlers import TimedRotatingFileHandler
 from datetime import datetime, timedelta
-from ..settings import LOG_DIR
+from constants.data_paths import LOG_PATH
 
 
-os.makedirs(LOG_DIR, exist_ok=True)
-log_filepath = os.path.join(LOG_DIR, "llm_running_logs.log")
+os.makedirs(LOG_PATH, exist_ok=True)
+log_filepath = os.path.join(LOG_PATH, "llm_running_logs.log")
 logging_format = "%(asctime)s: %(levelname)s: %(module)s: %(message)s"
 formatter = logging.Formatter(logging_format)
 
@@ -34,4 +34,4 @@ def cleanup_old_logs(directory, keep_days=2):
                 logger.info(f"Deleted old log file: {file_path}")
 
 
-cleanup_old_logs(LOG_DIR, keep_days=2)
+cleanup_old_logs(LOG_PATH, keep_days=2)
