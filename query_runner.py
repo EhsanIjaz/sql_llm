@@ -4,11 +4,10 @@ from datetime import datetime
 
 
 from llm_code.data_processor_and_loader import *
-# from .llm_code.data_processor_and_loader import latest_month_year, data_loader
 from llm_code.sql_gen_and_exec import *
 from llm_code.streamlit_helper import *
 from llm_code.settings import MAX_HISTORY_LENGTH
-from llm_code.prompts.prompts import prompt, prompt_2 , prompt_gpt
+from llm_code.prompts.prompts import prompt, prompt_2 
 from llm_code.common_utils.logging import logger
 
 # Streamlit App Configuration
