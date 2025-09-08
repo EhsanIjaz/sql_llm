@@ -2,7 +2,7 @@ from dotenv import load_dotenv
 import os
 from pathlib import Path
 
-from constants import DEFAULT_ENV_VARS_PATH
+from src.constants import DEFAULT_ENV_VARS_PATH
 
 
 class EnvConfig:

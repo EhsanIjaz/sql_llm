@@ -2,7 +2,7 @@ import os
 import logging
 from logging.handlers import TimedRotatingFileHandler
 from datetime import datetime, timedelta
-from constants.data_paths import LOG_PATH
+from src.constants.data_paths import LOG_PATH
 
 
 os.makedirs(LOG_PATH, exist_ok=True)

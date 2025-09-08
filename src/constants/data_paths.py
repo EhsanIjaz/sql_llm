@@ -1,12 +1,13 @@
 from pathlib import Path
 
-FILE_PATH = Path(__file__).parent.parent
+FILE_PATH = Path(__file__).parent.parent.parent
 
 COMPANY = "ebm"
 COUNTRY = "pakistan"
 CITY = "karachi"
 
 DATA_PATH = FILE_PATH.joinpath("data")
+
 LOG_PATH = FILE_PATH.joinpath("logs")
 
 

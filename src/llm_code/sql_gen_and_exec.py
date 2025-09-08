@@ -5,16 +5,18 @@ from typing import Optional
 import duckdb
 import pandas as pd
 import openai
+from openai import OpenAI
 import os
 from dotenv import load_dotenv
+import requests
 
 # openai.api_key = 
 
 
-from decorators import time_checker
+from src.utils.decorator import time_checker
 from transformers import AutoTokenizer, AutoModelForCausalLM
-from common_utils.logging import logger
-from constants import *
+from src.utils.logging import logger
+from src.constants import *
 
 logger.info(f"Initialized Model : {MODEL_NAME} ")
 DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
@@ -113,10 +115,11 @@ def generate_sql_openrouterai (question: str, latest_month: str, latest_year:str
         response = client.chat.completions.create(
             # Use the model name as specified on OpenRouter
             # model="sarvamai/sarvam-m:free",
-            model= "deepseek/deepseek-prover-v2:free",
+            model= "google/gemma-3n-e4b-it:free",
             messages=[
-                {"role": "system", "content": updated_prompt},
-                {"role": "user", "content": question}
+                # {"role": "system", "content": updated_prompt},
+                # {"role": "user", "content": question} 
+                {"role": "user", "content": f"{updated_prompt}\n\n{question}"}
             ],
             temperature=0,
             max_tokens=400
@@ -124,7 +127,6 @@ def generate_sql_openrouterai (question: str, latest_month: str, latest_year:str
 
         
         sql_query = response.choices[0].message.content.strip()
-        print(sql_query)
 
         # Split the string into lines
         lines = sql_query.strip().split('\n')
@@ -134,18 +136,69 @@ def generate_sql_openrouterai (question: str, latest_month: str, latest_year:str
             stripped_sql = '\n'.join(lines[1:-1])
         else:
             stripped_sql = sql_query # Or handle as an error if the format is unexpected
+  
+        # 🔹 Fetch usage/quota info
+        usage_url = "https://openrouter.ai/api/v1/auth/key"
+        headers = {"Authorization": f"Bearer {openrouter_api_key}"}
+        usage_resp = requests.get(usage_url, headers=headers)
 
-        print(".......")        
-        print(stripped_sql)
+        if usage_resp.status_code == 200:
+            usage_data = usage_resp.json()
+            print("🔹 API Usage Info:", usage_data)
+        else:
+            print(f"⚠️ Could not fetch usage info (status {usage_resp.json()})")
 
         return stripped_sql
+        
     except Exception as e:
         print(f"Error calling OpenRouter API for Sarvam-M: {e}")
         return f"Error: API call failed - {e}"
     
 
+def generate_summary_openrouterai(df, prompt: str = None):
+    """
+    Generate bullet-point summary from a dataframe using OpenRouter API.
+    """
+    print("running generate_summary_openrouterai")
+    openrouter_api_key = os.getenv("OPENROUTER_API_KEY")
+    if not openrouter_api_key:
+        print("Key Not FOUND")
+        return None
+    else:
+        print("Key Found")
 
+    client = openai.OpenAI(
+        base_url="https://openrouter.ai/api/v1",
+        api_key=openrouter_api_key
+    )
 
+    # Convert DataFrame -> string (limit rows to avoid huge context)
+    df_text = df.head(10).to_string(index=False)  # show top 10 rows only
+    if prompt is None:
+        prompt = """You are a data summarizer.
+        Given the following dataframe, generate a bullet-point or bullet-points  summary.
+        Each bullet should describe one row with key column information.
+        Keep it short and clear.
+        """
+
+    updated_prompt = f"{prompt}\n\nDataFrame Preview:\n{df_text}"
+
+    try:
+        response = client.chat.completions.create(
+            model="google/gemma-3n-e4b-it:free",
+            messages=[
+                {"role": "user", "content": updated_prompt}
+            ],
+            temperature=0.2,
+            max_tokens=400
+        )
+
+        summary = response.choices[0].message.content.strip()
+        return summary
+
+    except Exception as e:
+        print(f"Error calling OpenRouter API for summary: {e}")
+        return f"Error: API call failed - {e}"
 
 
 def execute_sql(query: str, df: pd.DataFrame) -> Optional[pd.DataFrame]:
@@ -160,3 +213,51 @@ def execute_sql(query: str, df: pd.DataFrame) -> Optional[pd.DataFrame]:
         logger.error(f"SQL execution failed: {str(e)}")
         st.error("Invalid query format. Please check your syntax.")
         return None
+
+
+def generate_sql_openai(question: str, latest_month: str, latest_year: str, prompt: str):
+    """
+    Generates SQL using OpenAI API instead of OpenRouter.
+    Requires OPENAI_API_KEY in environment variables.
+    """
+
+    print("running generate_sql_openai")
+    openai_api_key = os.getenv("OPENAI_API_KEY")
+    if not openai_api_key:
+        print("Key Not FOUND")
+        return "Error: OPENAI_API_KEY not set"
+    else:
+        print("Key Found")
+
+    client = OpenAI(api_key=openai_api_key)
+
+    updated_prompt = prompt.format(
+        question=question, latest_month=latest_month, latest_year=latest_year
+    )
+
+    try:
+        response = client.chat.completions.create(
+            model="gpt-4o-mini",   # ✅ choose your OpenAI model here
+            messages=[
+                {"role": "system", "content": "You are a SQL generator assistant."},
+                {"role": "user", "content": f"{updated_prompt}\n\n{question}"}
+            ],
+            temperature=0,
+            max_tokens=400
+        )
+
+        sql_query = response.choices[0].message.content.strip()
+
+        # cleanup SQL (remove triple backticks etc.)
+        lines = sql_query.strip().split("\n")
+        if len(lines) >= 2:
+            stripped_sql = "\n".join(lines[1:-1])
+        else:
+            stripped_sql = sql_query
+
+        return stripped_sql
+
+    except Exception as e:
+        print(f"Error calling OpenAI API: {e}")
+        return f"Error: API call failed - {e}"
+    

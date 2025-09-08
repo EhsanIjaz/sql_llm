@@ -5,8 +5,8 @@ import gspread
 from google.oauth2.service_account import Credentials
 
 
-from configuration import EnvConfig
-from constants import DRIVE_AUTH_ACCESS, SPREADSHEET_ACCESS, FILE_ACCESS
+from config.configuration import EnvConfig
+from src.constants import DRIVE_AUTH_ACCESS, SPREADSHEET_ACCESS, FILE_ACCESS
 
 
 class GoogleDriveAuth:

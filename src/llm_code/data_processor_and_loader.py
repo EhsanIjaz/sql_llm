@@ -7,10 +7,11 @@ from pathlib import Path
 from typing import Tuple
 
 
-from functions.aws_funcs import *
-from constants import *
-from common_utils.logging import logger
-from decorators import time_checker
+from src.connector_aws_gdrive.aws_funcs import *
+from src.connector_aws_gdrive.gdrive_funcs import *
+from src.constants import *
+from src.utils.logging import logger
+from src.utils.decorator import time_checker
 
 # Configure display options
 pd.options.display.float_format = "{:,.2f}".format
@@ -80,17 +81,32 @@ def latest_month_year(df: pd.DataFrame) -> Tuple[int, int]:
     return df.month.max(), df.year.max()
 
 
-def upload_from_local(local_file: Path):
+def upload_from_local(local_file: Path, hierarchy: dict):
     if local_file.exists() and local_file.suffix in [".csv", ".gz", ".gzip"]:
         local_md5 = hashlib.md5(open(local_file, "rb").read()).hexdigest()
         remote_filename = f"{local_md5}{local_file.suffix}"
 
-        if not isin_s3bucket(filename=remote_filename, **hierarchy):
-            upload_file_to_s3bucket(
-                local_file, remote_filename=remote_filename, **hierarchy
-            )
-            logger.info(f"File uploaded to S3: {remote_filename}")
-            logger.info(f"File uploaded to S3: {remote_filename}")
+        print("Where do you want to upload the file?")
+        print("1. AWS S3")
+        print("2. Google Drive")
+        choice = input("Enter your choice (1 or 2): ").strip()
+
+        if choice == "1":
+            if not isin_s3bucket(filename=remote_filename, **hierarchy):
+                upload_file_to_s3bucket(local_file, remote_filename=remote_filename, **hierarchy)
+                logger.info(f"File uploaded to S3: {remote_filename}")
+            else:
+                logger.info(f"File already exists in S3: {remote_filename}")
+
+        elif choice == "2":
+            success = upload_file_to_gdrive(local_file)
+            if success:
+                logger.info(f"File uploaded to Google Drive: {local_file.name}")
+            else:
+                logger.error("Failed to upload file to Google Drive")
+
+        else:
+            logger.warning("Invalid choice. Upload canceled.")
 
 
 def enforce_single_file(dir_path: Path):
@@ -127,10 +143,25 @@ def data_loader() -> pd.DataFrame:
 
     # Step 3: If no file in download, check S3 and download it
     else:
-        downloaded_file = download_file_from_s3bucket(**hierarchy)
-        if downloaded_file:
-            DATA_FILE = downloaded_file
-            logger.info(f"File downloaded from S3: {DATA_FILE}")
+        print("No file found locally. Choose source to download:")
+        print("1. AWS S3")
+        print("2. Google Drive")
+        choice = input("Enter your choice (1 or 2): ").strip()
+
+        if choice == "1":
+            downloaded_file = download_file_from_s3bucket(**hierarchy)
+            if downloaded_file:
+                DATA_FILE = downloaded_file
+                logger.info(f"File downloaded from S3: {DATA_FILE}")
+
+        elif choice == "2":
+            try:
+                downloaded_file = get_latest_file(folder_key=FOLDER_KEY, download_path=DOWNLOADS_PATH.as_posix())
+                if downloaded_file:
+                    DATA_FILE = Path(downloaded_file)
+                    logger.info(f"File downloaded from Google Drive: {DATA_FILE}")
+            except Exception as e:
+                logger.error(f"Google Drive download failed: {e}")
 
     # Step 4: If file not in S3, check upload directory and upload it
     if DATA_FILE is None:

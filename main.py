@@ -1,8 +1,8 @@
 # from helper import g_auth_client
 
 
-from functions.gdrive_funcs import get_sheet, get_latest_file
-from constants import *
+from src.connector_aws_gdrive.gdrive_funcs import get_sheet, get_latest_file
+from src.constants import *
 import pandas as pd
 
 
@@ -23,17 +23,17 @@ if __name__ == "__main__":
 # 1X4LJMxPokd0wmU1AojmrlhmVpWRV7Ywh
 # from helper import g_auth_client
 
-from functions.gdrive_funcs import get_sheet, get_latest_file
-from constants import SHEET_KEY, FOLDER_KEY, DOWNLOADS_PATH
+from src.connector_aws_gdrive.gdrive_funcs import get_sheet, get_latest_file
+from src.constants import SHEET_KEY, FOLDER_KEY, DOWNLOADS_PATH
 import pandas as pd
 
 
 
-from functions.gdrive_funcs import get_sheet, get_folder 
-from constants import SHEET_KEY, FOLDER_KEY, DOWNLOADS_PATH
+from src.connector_aws_gdrive.gdrive_funcs import get_sheet, get_folder 
+from src.constants import SHEET_KEY, FOLDER_KEY, DOWNLOADS_PATH
 import pandas as pd
-from functions.dataloader import clean_and_rename_file, latest_file, get_latest_file
-from constants.data_paths import *
+# from functions.dataloader import clean_and_rename_file, latest_file, get_latest_file
+from src.constants.data_paths import *
 
 
 
@@ -55,9 +55,9 @@ if __name__ == "__main__":
    
     print("the download path",DOWNLOADS_PATH)
     a = get_latest_file(DOWNLOADS_PATH)
-    b = latest_file(DOWNLOADS_PATH)
+    # b = latest_file(DOWNLOADS_PATH)
     print(a)
-    print(b)
+    # print(b)
     # print(SCRIPT_DIR)
     # latest_file_1 = latest_file(DOWNLOADS_PATH)
 

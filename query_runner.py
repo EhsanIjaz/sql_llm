@@ -2,61 +2,61 @@ import streamlit as st
 import pandas as pd
 from datetime import datetime
 
+from src.llm_code.data_processor_and_loader import data_loader
+from src.llm_code.sql_gen_and_exec import *
+from src.llm_code.streamlit_helper import *
+from src.constants.app_constant import MODE_DISPLAY
+from src.prompts.prompts import prompt, prompt_2 
+from src.utils.logging import logger
 
-from llm_code.data_processor_and_loader import *
-from llm_code.sql_gen_and_exec import *
-from llm_code.streamlit_helper import *
-from constants import MAX_HISTORY_LENGTH
-from llm_code.prompts.prompts import prompt, prompt_2 
-from common_utils.logging import logger
 
-# Streamlit App Configuration
-st.set_page_config(
-    page_title="Chat GPC - Home",
-    layout="wide",
-    page_icon="💬",
-    initial_sidebar_state="expanded",
-)
-
-st.title("💬 Chat CPG")
-
-# Initialize session state
+streamlit_initializer()
 init_session_state()
+
+st.sidebar.write("## 💬 Chat Mode")
+
+select_chat_mode = sidebar_conversation_selector()
+st.session_state.chat_mode = MODE_DISPLAY[select_chat_mode]
+render_contextual_reset_button()
 display_recent_queries()
-
-# Greet user
-if not st.session_state.greeted:
-    with st.chat_message("assistant"):
-        st.write_stream(greet_generator())
-    st.session_state.greeted = True
-
-# Display chat history
+greetor()
 display_chat_history()
+render_contextual_limits()
 
-# Load data
 llm_df = data_loader()
 LATEST_MONTH, LATEST_YEAR = latest_month_year(llm_df)
 user_input = st.chat_input("Type your message and press Enter...")
 question = user_input.strip().lower() if user_input else ""
-print(question)
 
-if check_specific_word(question):
-    prompt = prompt_2
 
-if not question:
-    st.session_state.show_month_prompt = False
-else:
-    if check_month_in_question(question):
+if user_input:
+    st.session_state.query_processed = False
+
+if question and not st.session_state.query_processed:
+    if st.session_state.chat_mode == "Contextual Query":
+        context_question = build_contextual_question(question)
+        enhanced_question = generate_enhanced_question(context_question)
+        logger.info(f"Generated Contextual Question \n {enhanced_question}")
+    else:
+        enhanced_question = generate_enhanced_question(question)
+        logger.info(f"Generated Single Question \n {enhanced_question}")
+
+    prompt_used = prompt_2 if check_specific_word(question) else prompt
+
+    # Month check: check all context + question to ensure valid month reference
+    full_context = st.session_state.get("context_history", []) + [question]
+    combined_text = " ".join(full_context).lower()
+
+    if check_month_in_question(combined_text):
         updated_question = question.replace("why", "").strip() if "why" in question else question
         st.session_state.show_why = "why" in question
         unique_key = f"{datetime.now().timestamp()}_{st.session_state.analysis_counter}"
         st.session_state.analysis_counter += 1
-
-        st.session_state.chat_history.append(
-            {"question": question, "data": None, "sql": None, "why_result": None, "unique_key": unique_key}
-        )
+        label = st.session_state.chat_mode
 
         try:
+            with st.chat_message("user"):
+                st.markdown(f"**_{question}_**")
             with st.status("🚀 Processing...", expanded=True) as status:
                 progress_bar = st.progress(0)
                 sql_query, df_result = None, None
@@ -66,9 +66,7 @@ else:
                     time.sleep(1)
 
                     if "Thinking" in step:
-                        enhanced_question = generate_enhanced_question(question)
-                        # sql_query = generate_sql(enhanced_question, LATEST_MONTH, LATEST_YEAR, prompt)
-                        sql_query = generate_sql_openrouterai(enhanced_question, LATEST_MONTH, LATEST_YEAR, prompt)
+                        sql_query = generate_sql_openrouterai(enhanced_question, LATEST_MONTH, LATEST_YEAR, prompt_used)
                         st.session_state.ex_sql = sql_query
                         logger.info(f"Generated SQL Query \n {sql_query}")
 
@@ -81,40 +79,43 @@ else:
 
             # --- GRID LAYOUT ---
             st.divider()
-            col1, col2 = st.columns([2, 3])  # Two-column layout (Summary + Chart)
-            
-            # SUMMARY VIEW
+            col1, col2 = st.columns([2, 3])
+
             with col1:
                 st.subheader("📄 Summary View")
-                st.info("One-line summary here.")
+                display_summary(df_result)
 
-            # CHART ANALYTICS
             with col2:
-                st.subheader("📊 Chart Analytics")
+                st.subheader("📈 Chart Analytics")
                 with st.container():
                     current_fig, chart_config, unique_key = display_chart_analytics(
                         df_result.copy(), unique_key=unique_key, is_editable=True
                     )
 
             st.divider()
-            
-            # TABLE VIEW (RESULTS)
+
             st.subheader("📋 Result View")
-            st.dataframe(df_result, use_container_width=True)
+            display_table(df_result)
 
             st.divider()
 
-            # WHY ANALYSIS
             if st.session_state.show_why:
                 st.subheader("❓ Why Results")
-                st.dataframe(df_result, use_container_width=True)
+                why_result = get_why_result(df_result)
+                if why_result is not None and not why_result.empty:
+                    st.dataframe(why_result, use_container_width=True)
+                else:
+                    st.warning("No 'Why' results available for this query.")
 
-            # Store analysis result
-            st.session_state.chat_history[-1].update({"data": df_result, "sql": sql_query})
+            store_query_result(
+                question=question,
+                df_result=df_result,
+                sql_query=sql_query,
+                why_result=why_result if st.session_state.show_why else None,
+                unique_key=unique_key,
+            )
 
-            if len(st.session_state.chat_history) > MAX_HISTORY_LENGTH:
-                st.session_state.chat_history.pop(0)
-
+            st.session_state.query_processed = True
             st.rerun()
 
         except Exception as e:
@@ -125,6 +126,6 @@ else:
             st.session_state.show_month_prompt = True
             with st.chat_message("assistant"):
                 st.write_stream(re_write_query_with_month())
-                st.write_stream(write_question(question))
+                st.write_stream(write_question(enhanced_question))
 
 st.divider()

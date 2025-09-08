@@ -8,7 +8,7 @@ ORDINAL_SUFFIXES = ["st", "nd", "rd", "th"]
 
 
 # Configuration constants
-CONFIG_ROOT = 'conf'
+CONFIG_ROOT = 'config'
 DEFAULT_ENV_VARS_PATH = f'{CONFIG_ROOT}/config.env'
 DEFAULT_CONFIG_PATH = f'{CONFIG_ROOT}/config.yaml'
 
@@ -30,6 +30,7 @@ G_FILES_FIELDS = "files(id, name, mimeType, size)"
 
 # Streamlit stetting 
 MAX_HISTORY_LENGTH = 10
+MAX_CONTENT_LENGTH = 5
 LETTER_LIMIT = 22
 
 # sql_gen_and_exec
@@ -68,3 +69,9 @@ COLUMNS_MAP = {
 }
 
 DEFAULT_FILL_VALUE = "UNK"
+
+
+MODE_DISPLAY = {
+    "Single Query Mode": "Single Query",
+    "Contextual Conversation": "Contextual Query"
+}

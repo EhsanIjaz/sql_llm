@@ -1,8 +1,8 @@
 from pathlib import Path
 
 from config.aws_configuration import AWSConfig
-from constants import *
-from common_utils.logging import logger
+from src.constants import *
+from src.utils.logging import logger
 
 
 def upload_file_to_s3bucket(

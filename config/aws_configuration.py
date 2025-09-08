@@ -4,9 +4,9 @@ import boto3
 from boto3.s3.transfer import TransferConfig
 from botocore.exceptions import ClientError
 
-from common_utils.logging import logger
+from src.utils.logging import logger
 from config.configuration import EnvConfig
-from constants import DEFAULT_ENV_VARS_PATH
+from src.constants import DEFAULT_ENV_VARS_PATH
 
 
 class AWSConfig:

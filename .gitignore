@@ -87,8 +87,10 @@ keys
 #ignore logs
 */logs/
 
-#conf folder
-/conf/*
+#configurations
+/config/config.env
+/config/gdrive_creds_1.json
+/config/gdrive_creds.json
 
 # Compiled Java class files
 *.class
