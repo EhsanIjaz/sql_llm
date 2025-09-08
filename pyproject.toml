@@ -1,0 +1,48 @@
+[project]
+authors = [{name = "ehsan", email = "muhammadehsanijaz@gmail.com"}]
+dependencies = ["python-dotenv", "torch"] 
+name = "sql_llm"
+requires-python = ">= 3.12"
+version = "0.1.0"
+
+[build-system]
+build-backend = "hatchling.build"
+requires = ["hatchling"]
+
+[tool.pixi.workspace]
+channels = ["conda-forge"]
+platforms = ["win-64", "linux-64"]
+
+[tool.pixi.pypi-dependencies]
+streamlit-authenticator = "*"
+sql_llm = { path = ".", editable = true }
+
+[tool.pixi.dependencies]
+pandas = "~=2.3.0"
+pyarrow = "~=20.0.0"
+streamlit= "~=1.46.0"
+boto3 = "~=1.40.25"
+google-api-python-client = "~=2.181.0"
+gspread = "~=5.12.4"
+sqlparse = "~=0.5.3"
+python-duckdb = "~=1.3.2"
+openai = "~=1.106.1"
+transformers = "~=4.56.1"
+plotly = "~=6.3.0"
+sqlglot = "~=27.12.0"
+
+[tool.pixi.feature.dev.dependencies]
+jupyterlab = "~=4.4.3"
+ruff = "~=0.12.0"
+mypy = "~=1.16.0"
+pytest = "~=8.4.0"
+
+
+[tool.pixi.feature.dev.tasks]
+main = "python $PIXI_PROJECT_ROOT/src/sql_llm/main.py"
+
+# Environment definitions
+[tool.pixi.environments]
+default = {features = [], solve-group = "default"}
+dev = {features = ["dev"], solve-group = "default"}
+

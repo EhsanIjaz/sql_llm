@@ -67,6 +67,7 @@ if question and not st.session_state.query_processed:
 
                     if "Thinking" in step:
                         sql_query = generate_sql_openrouterai(enhanced_question, LATEST_MONTH, LATEST_YEAR, prompt_used)
+                        # sql_query = generate_sql_openai(enhanced_question, LATEST_MONTH, LATEST_YEAR, prompt_used)
                         st.session_state.ex_sql = sql_query
                         logger.info(f"Generated SQL Query \n {sql_query}")
 

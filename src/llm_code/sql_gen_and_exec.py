@@ -7,10 +7,8 @@ import pandas as pd
 import openai
 from openai import OpenAI
 import os
-from dotenv import load_dotenv
 import requests
-
-# openai.api_key = 
+from dotenv import load_dotenv
 
 
 from src.utils.decorator import time_checker
@@ -113,7 +111,7 @@ def generate_sql_openrouterai (question: str, latest_month: str, latest_year:str
 
     try:
         response = client.chat.completions.create(
-            # Use the model name as specified on OpenRouter
+
             # model="sarvamai/sarvam-m:free",
             model= "google/gemma-3n-e4b-it:free",
             messages=[
@@ -127,26 +125,23 @@ def generate_sql_openrouterai (question: str, latest_month: str, latest_year:str
 
         
         sql_query = response.choices[0].message.content.strip()
-
-        # Split the string into lines
         lines = sql_query.strip().split('\n')
 
-        # Remove the first and last lines
-        if len(lines) >= 2: # Ensure there are at least two lines to remove
+        if len(lines) >= 2:
             stripped_sql = '\n'.join(lines[1:-1])
         else:
-            stripped_sql = sql_query # Or handle as an error if the format is unexpected
+            stripped_sql = sql_query
   
         # 🔹 Fetch usage/quota info
         usage_url = "https://openrouter.ai/api/v1/auth/key"
         headers = {"Authorization": f"Bearer {openrouter_api_key}"}
         usage_resp = requests.get(usage_url, headers=headers)
 
-        if usage_resp.status_code == 200:
-            usage_data = usage_resp.json()
-            print("🔹 API Usage Info:", usage_data)
-        else:
-            print(f"⚠️ Could not fetch usage info (status {usage_resp.json()})")
+        # if usage_resp.status_code == 200:
+        #     usage_data = usage_resp.json()
+        #     print("🔹 API Usage Info:", usage_data)
+        # else:
+        #     print(f"⚠️ Could not fetch usage info (status {usage_resp.json()})")
 
         return stripped_sql
         
@@ -172,7 +167,6 @@ def generate_summary_openrouterai(df, prompt: str = None):
         api_key=openrouter_api_key
     )
 
-    # Convert DataFrame -> string (limit rows to avoid huge context)
     df_text = df.head(10).to_string(index=False)  # show top 10 rows only
     if prompt is None:
         prompt = """You are a data summarizer.
@@ -260,4 +254,3 @@ def generate_sql_openai(question: str, latest_month: str, latest_year: str, prom
     except Exception as e:
         print(f"Error calling OpenAI API: {e}")
         return f"Error: API call failed - {e}"
-    

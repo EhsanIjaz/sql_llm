@@ -11,7 +11,7 @@ from typing import Generator, Tuple, List
 
 from src.constants import *
 from src.utils.logging import logger
-from .sql_gen_and_exec import generate_sql, execute_sql, generate_sql_chat, generate_sql_openrouterai, generate_summary_openrouterai
+from .sql_gen_and_exec import generate_sql, execute_sql, generate_sql_chat, generate_sql_openrouterai, generate_summary_openrouterai, generate_sql_openai
 from src.prompts.prompts import prompt
 from .data_processor_and_loader import latest_month_year, data_loader
 
@@ -632,6 +632,7 @@ def get_why_result(result_df):
     why_question = f"Strictly retrieve only the following aggregates: SUM(mro) AS total_mro, SUM(unproductive_mro) AS total_unproductive_mro, SUM(unassorted_mro) AS total_unassorted_mro, SUM(stockout_mro) AS total_stockout_mro, should be based on the filtered data, also utilize SELECT and GROUP BY as defined below. The column is {last_col} with values are {last_col_values}, for the month {month} and year {year}."
     # why_sql = generate_sql_chat(why_question, latest_month=LATEST_MONTH, latest_year=LATEST_YEAR, prompt=prompt)
     why_sql = generate_sql_openrouterai(why_question, latest_month=LATEST_MONTH, latest_year=LATEST_YEAR, prompt=prompt)
+    # why_sql = generate_sql_openai(why_question, latest_month=LATEST_MONTH, latest_year=LATEST_YEAR, prompt=prompt)
     logger.info(f"This is WHY SQL : \n{why_sql}")
 
     # try:
