@@ -8,6 +8,7 @@ import requests
 from sqlglot import parse_one, exp
 from typing import Generator
 from streamlit_echarts import st_echarts # type: ignore
+from streamlit_lottie import st_lottie # type: ignore
 
 from src.constants import *
 from src.utils.logging import logger
@@ -175,6 +176,8 @@ def write_question(user_question: str) -> Generator[str, None, None]:
     return stream_response(random.choice(prefixes) + f"**{user_question}**")
 
 def display_chart_analytics(df: pd.DataFrame, unique_key, is_editable=True):
+
+
     """Interactive bar chart using Apache ECharts in Streamlit."""
 
     if df is None or not isinstance(df, pd.DataFrame) or df.empty:
@@ -239,8 +242,10 @@ def display_chart_analytics(df: pd.DataFrame, unique_key, is_editable=True):
         "grid": {"left": "3%", "right": "4%", "bottom": "3%", "containLabel": True}
     }
 
-    st_echarts(options=option, height="520px", key=f"echart_{unique_key}")
-
+    chart_container = st.empty()
+    with chart_container:
+        st_echarts(options=option, height="520px", key=f"echart_{unique_key}")
+    time.sleep(0.1)  # Small delay to ensure rendering
     return option, {"x_axis": x_axis, "highlight_column": highlight_col}, unique_key
 
 def display_chat_history():
@@ -267,6 +272,8 @@ def display_chat_history():
             with st.container():
                 display_table(df)
 
+            
+
             why_results = exchange.get("why_result")
             if why_results is not None:
                 st.write("### Why Results")
@@ -274,6 +281,9 @@ def display_chat_history():
             else:
                 if not st.session_state.get(f"why_clicked_{idx}", False):
                     if st.button("Process 'Why'", key=f"process_why_{unique_key}_{idx}", disabled=not is_editable):
+                        anim_placeholder = st.empty()
+                        with anim_placeholder:
+                            st_lottie(LOADING_ANIM, height=200, key="loader")
                         logger.info("Processing 'Why' button clicked...")
                         why_results = get_why_result(df)
                         if why_results is not None and not why_results.empty:
@@ -281,6 +291,7 @@ def display_chat_history():
                             st.session_state.chat_history[idx]["why_result"] = why_results
                             st.session_state[f"why_clicked_{idx}"] = True
                             st.rerun()
+                        anim_placeholder = st.empty()
 
             with st.container(border=True):
                 col1, col2 = st.columns([2, 2.5])
@@ -296,7 +307,7 @@ def display_chat_history():
 
             with col2:
                 with st.container(border=True):
-                    st_echarts(exchange["chart_option"], height="520px", key=f"echart_hist_{idx}")
+                    
                     fig, _, unique_key = display_chart_analytics(
                         df, unique_key=unique_key, is_editable=is_editable
                     )
@@ -577,6 +588,7 @@ def get_why_result(result_df):
     - LIMIT {limit if limit else 1}
     Do not add OR, IS NULL, or extra conditions.
     """
+
     why_sql = generate_sql_openai(why_question, latest_month=LATEST_MONTH, latest_year=LATEST_YEAR, prompt=prompt)
     logger.info(f"This is WHY SQL : \n{why_sql}")
 
@@ -738,5 +750,7 @@ def load_lottie_url(url: str):
         return None
     return r.json()
 
-LOADING_ANIM = load_lottie_url("https://assets2.lottiefiles.com/packages/lf20_usmfx6bp.json")
+# LOADING_ANIM = load_lottie_url("https://assets2.lottiefiles.com/packages/lf20_usmfx6bp.json")
+LOADING_ANIM = load_lottie_url("https://assets2.lottiefiles.com/datafiles/iTvqbURmiPR4l5L/data.json")
 NO_DATA_ANIM = load_lottie_url("https://assets2.lottiefiles.com/packages/lf20_qp1q7mct.json")
+LOADING_CHARTS = load_lottie_url("https://assets2.lottiefiles.com/datafiles/jQOi6i5dHOY4uP3/data.json")

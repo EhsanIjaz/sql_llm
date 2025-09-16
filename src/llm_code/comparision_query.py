@@ -28,6 +28,9 @@ def comparision_query (user_input, llm_df, selections):
         st.write_stream(question_exist_generator())
         st.write_stream(write_question(question))
 
+    updated_question = question.replace("why", "").strip() if "why" in question else question
+    st.session_state.show_why = "why" in question
+
     enhanced_question, prompt_used = build_comparision_query(question, selections)
     unique_key = f"{datetime.now().timestamp()}_{st.session_state.analysis_counter}"
 

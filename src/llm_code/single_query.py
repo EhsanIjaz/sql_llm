@@ -2,6 +2,7 @@ import streamlit as st
 from streamlit_lottie import st_lottie # type: ignore
 from datetime import datetime
 import pandas as pd
+import time
 
 from src.llm_code.streamlit_helper import (
      latest_month_year, generate_enhanced_question, write_question,
@@ -9,7 +10,7 @@ from src.llm_code.streamlit_helper import (
     execute_sql, display_summary, display_chart_analytics, display_table,
     get_why_result, store_query_result, re_write_query_with_month, 
 )
-from src.llm_code.streamlit_helper import NO_DATA_ANIM, LOADING_ANIM
+from src.llm_code.streamlit_helper import NO_DATA_ANIM, LOADING_ANIM, LOADING_CHARTS
 from src.prompts.prompts import prompt, prompt_2 
 from src.utils.logging import logger
 
@@ -77,6 +78,10 @@ def single_query (user_input, llm_df):
                 status.update(label="**Analysis Complete**", state="complete")
 
             if result_data is not None and not result_data.empty:
+                
+                st.subheader("📋 Result View")
+                display_table(df_result)
+
                 col1, col2 = st.columns([2, 3])
                     
                 with col1:
@@ -85,13 +90,15 @@ def single_query (user_input, llm_df):
 
                 with col2:
                     st.subheader("📈 Chart Analytics")
+
                     with st.container():
                         current_fig, chart_config, unique_key = display_chart_analytics(
                             df_result.copy(), unique_key=unique_key, is_editable=True
                         )
 
-                st.subheader("📋 Result View")
-                display_table(df_result)
+                    # clear loader
+                    anim_placeholder.empty()
+
                 st.divider()
 
                 if st.session_state.show_why:
