@@ -1,21 +1,31 @@
 import streamlit as st
 from streamlit_lottie import st_lottie
+from datetime import datetime
+import pandas as pd
 
-
-
-from src.llm_code.streamlit_helper import *
-from src.llm_code.data_processor_and_loader import data_loader
+from src.llm_code.streamlit_helper import (
+     latest_month_year, generate_enhanced_question, write_question,
+    check_specific_word, check_month_in_question, generate_sql_openai,
+    execute_sql, display_summary, display_chart_analytics, display_table,
+    get_why_result, store_query_result, re_write_query_with_month, 
+)
+from src.llm_code.streamlit_helper import NO_DATA_ANIM, LOADING_ANIM
 from src.prompts.prompts import prompt, prompt_2 
 from src.utils.logging import logger
 
-loading_anim = load_lottie_url("https://assets2.lottiefiles.com/packages/lf20_usmfx6bp.json")
-no_data_lottie = load_lottie_url("https://assets2.lottiefiles.com/packages/lf20_qp1q7mct.json")
 
 
 def single_query (user_input, llm_df):
+    """
+    Process a single user query, execute SQL, and display results in Streamlit.
+
+    Args:
+        user_input (str): The user's input query.
+        dataset (pd.DataFrame, optional): Preloaded dataset to avoid reloading. Defaults to None.
+    """
     logger.info(f"\n")
-    logger.info(f"Single Query function running ...")
-    llm_df = data_loader()
+    logger.info("Starting single query processing...")
+
     LATEST_MONTH, LATEST_YEAR = latest_month_year(llm_df)
 
     question = user_input.strip().lower() if user_input else ""
@@ -34,26 +44,25 @@ def single_query (user_input, llm_df):
         st.session_state.show_why = "why" in question
         unique_key = f"{datetime.now().timestamp()}_{st.session_state.analysis_counter}"
         st.session_state.analysis_counter += 1
-        label = st.session_state.chat_mode
 
         try:
             with st.chat_message("user"):
                 st.markdown(f"**_{question}_**")
-            with st.status("🚀 Processing...", expanded=True) as status:
+
+            with st.status("🚀 Processing query...", expanded=True) as status:
                 progress_bar = st.progress(0)
                 anim_placeholder = st.empty()
                 step_placeholder = st.empty()
                 sql_query, df_result = None, None
 
                 with anim_placeholder:
-                    st_lottie(loading_anim, height=200, key="loader")
+                    st_lottie(LOADING_ANIM, height=200, key="loader")
 
                 for step, progress in st.session_state.processing_steps:
                     step_placeholder.write(f"### {step}")
                     progress_bar.progress(progress)
 
                     if "Thinking" in step:
-                        # sql_query = generate_sql_openrouterai(enhanced_question, LATEST_MONTH, LATEST_YEAR, prompt_used)
                         sql_query = generate_sql_openai(enhanced_question, LATEST_MONTH, LATEST_YEAR, prompt_used)
                         st.session_state.ex_sql = sql_query
                         logger.info(f"Generated SQL Query \n {sql_query}")
@@ -67,10 +76,7 @@ def single_query (user_input, llm_df):
                 progress_bar.empty()
                 status.update(label="**Analysis Complete**", state="complete")
 
-            st.divider()
-
             if result_data is not None and not result_data.empty:
-                
                 col1, col2 = st.columns([2, 3])
                     
                 with col1:
@@ -84,11 +90,8 @@ def single_query (user_input, llm_df):
                             df_result.copy(), unique_key=unique_key, is_editable=True
                         )
 
-                # st.divider()
-
                 st.subheader("📋 Result View")
                 display_table(df_result)
-
                 st.divider()
 
                 if st.session_state.show_why:
@@ -111,18 +114,18 @@ def single_query (user_input, llm_df):
                 st.rerun()
 
             else:
-                st_lottie(no_data_lottie, height=200, key="no_data")
-                st.info("No data for Display")
+                st_lottie(NO_DATA_ANIM, height=200, key="no_data")
+                st.info("No data available for this query. Try rephrasing or checking your input.")
 
+        except ValueError as ve:
+            st.error(f"Invalid query or data issue: {str(ve)}")
+            logger.error(f"ValueError: {str(ve)}")
         except Exception as e:
-            st.error(f"Processing error: {str(e)}")
-            logger.error(f"Error: {str(e)}")
+            st.error("An unexpected error occurred. Please try again or contact support.")
+            logger.error(f"Unexpected error: {str(e)}")
     else:
         if not st.session_state.show_month_prompt:
             st.session_state.show_month_prompt = True
             with st.chat_message("assistant"):
                 st.write_stream(re_write_query_with_month())
                 st.write_stream(write_question(question))
-
-# st.divider()
-

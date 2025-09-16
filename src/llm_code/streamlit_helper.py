@@ -4,16 +4,14 @@ import random
 import string
 import pandas as pd
 import streamlit as st
-import plotly.express as px
+import requests
 from sqlglot import parse_one, exp
-from datetime import datetime
 from typing import Generator
 from streamlit_echarts import st_echarts
-import requests
 
 from src.constants import *
 from src.utils.logging import logger
-from .sql_gen_and_exec import generate_sql, execute_sql, generate_sql_openrouterai, generate_summary_openrouterai, generate_sql_openai
+from .sql_gen_and_exec import execute_sql, generate_sql_openai
 from src.prompts.prompts import prompt, prompt_comparison
 from src.prompts.prompt_examples import two_month_examples, three_month_examples
 from .data_processor_and_loader import latest_month_year, data_loader
@@ -126,7 +124,7 @@ def question_exist_generator()  -> Generator[str, None, None]:
     ]
     return stream_response(random.choice(month_exsist))
 
-def check_specific_word(question):
+def check_specific_word(question: str):
     list_words = ["assortment", "productivity", "stockout", "stockouts", "assortments"]
     for word in list_words:
         if word in question.lower():
@@ -298,6 +296,7 @@ def display_chat_history():
 
             with col2:
                 with st.container(border=True):
+                    st_echarts(exchange["chart_option"], height="520px", key=f"echart_hist_{idx}")
                     fig, _, unique_key = display_chart_analytics(
                         df, unique_key=unique_key, is_editable=is_editable
                     )
@@ -728,3 +727,6 @@ def load_lottie_url(url: str):
     if r.status_code != 200:
         return None
     return r.json()
+
+LOADING_ANIM = load_lottie_url("https://assets2.lottiefiles.com/packages/lf20_usmfx6bp.json")
+NO_DATA_ANIM = load_lottie_url("https://assets2.lottiefiles.com/packages/lf20_qp1q7mct.json")
