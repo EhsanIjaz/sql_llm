@@ -7,7 +7,7 @@ import streamlit as st
 import requests
 from sqlglot import parse_one, exp
 from typing import Generator
-from streamlit_echarts import st_echarts
+from streamlit_echarts import st_echarts # type: ignore
 
 from src.constants import *
 from src.utils.logging import logger
