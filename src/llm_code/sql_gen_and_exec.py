@@ -16,9 +16,9 @@ from transformers import AutoTokenizer, AutoModelForCausalLM
 from src.utils.logging import logger
 from src.constants import *
 
-logger.info(f"Initialized Model : {MODEL_NAME} ")
+# logger.info(f"Initialized Model : {MODEL_NAME} ")
 DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
-logger.info(f"Initialized Device: {DEVICE}")
+# logger.info(f"Initialized Device: {DEVICE}")
 
 load_dotenv(DEFAULT_ENV_VARS_PATH)
 
@@ -71,25 +71,6 @@ def generate_sql(question: str, latest_month: int, latest_year: int, prompt: str
     outputs = tokenizer.batch_decode(generated_ids, skip_special_tokens=True)
     # logger.info("SQL generated successfully")
     return sqlparse.format(outputs[0].split("[SQL]")[-1], reindent=True)
-
-
-def generate_sql_chat(question: str, latest_month: int, latest_year: int, prompt: str):
-    print("running generate_sql_chat")
-    updated_prompt = prompt.format(
-        question=question, latest_month=latest_month, latest_year=latest_year
-    )
-    response = openai.chat.completions.create(
-        model="gpt-3.5-turbo",
-        messages=[
-            {"role": "system", "content": updated_prompt},
-            {"role": "user", "content": question}
-        ],
-        temperature=0,
-        max_tokens=400
-    )
-    sql_query = response.choices[0].message.content.strip()
-    print(sql_query)
-    return sql_query
 
 
 def generate_sql_openrouterai (question: str, latest_month: str, latest_year:str, prompt:str):
@@ -154,7 +135,7 @@ def generate_summary_openrouterai(df, prompt: str = None):
     """
     Generate bullet-point summary from a dataframe using OpenRouter API.
     """
-    print("running generate_summary_openrouterai")
+    logger.info("running generate_summary_openrouterai")
     openrouter_api_key = os.getenv("OPENROUTER_API_KEY")
     if not openrouter_api_key:
         print("Key Not FOUND")
@@ -205,7 +186,7 @@ def execute_sql(query: str, df: pd.DataFrame) -> Optional[pd.DataFrame]:
 
     except duckdb.Error as e:
         logger.error(f"SQL execution failed: {str(e)}")
-        st.error("Invalid query format. Please check your syntax.")
+        st.info("Please check your Query, Thanks")
         return None
 
 
@@ -215,7 +196,7 @@ def generate_sql_openai(question: str, latest_month: str, latest_year: str, prom
     Requires OPENAI_API_KEY in environment variables.
     """
 
-    print("running generate_sql_openai")
+    logger.info("running generate_sql_openai")
     openai_api_key = os.getenv("OPENAI_API_KEY")
     if not openai_api_key:
         print("Key Not FOUND")
@@ -231,7 +212,8 @@ def generate_sql_openai(question: str, latest_month: str, latest_year: str, prom
 
     try:
         response = client.chat.completions.create(
-            model="gpt-4o-mini",   # ✅ choose your OpenAI model here
+            # model="gpt-4o-mini",   # ✅ choose your OpenAI model here
+            model = "gpt-4",
             messages=[
                 {"role": "system", "content": "You are a SQL generator assistant."},
                 {"role": "user", "content": f"{updated_prompt}\n\n{question}"}
@@ -239,6 +221,11 @@ def generate_sql_openai(question: str, latest_month: str, latest_year: str, prom
             temperature=0,
             max_tokens=400
         )
+
+        if hasattr(response, "usage"):
+            print(f"Tokens used: prompt={response.usage.prompt_tokens}, "
+                  f"completion={response.usage.completion_tokens}, "
+                  f"total={response.usage.total_tokens}")
 
         sql_query = response.choices[0].message.content.strip()
 

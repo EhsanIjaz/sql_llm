@@ -73,5 +73,15 @@ DEFAULT_FILL_VALUE = "UNK"
 
 MODE_DISPLAY = {
     "Single Query Mode": "Single Query",
-    "Contextual Conversation": "Contextual Query"
+    "Contextual Conversation": "Contextual Query",
+    "Comparision Query Mode" : "Comparision Query"
 }
+
+KEYWORD_GROUPBY_MAP = {
+        r"\broute(s)?\b": "region, city, area, territory, distributor, route",
+        r"\bdistributor(s)?\b": "region, city, area, territory, distributor",
+        r"\bterritory|territories\b": "region, city, area, territory",
+        r"\barea(s)?\b": "region, city, area",
+        r"\bcity|cities\b": "region, city",
+        r"\bregion(s)?\b": "region",
+    }

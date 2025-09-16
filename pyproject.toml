@@ -1,6 +1,7 @@
 [project]
 authors = [{name = "ehsan", email = "muhammadehsanijaz@gmail.com"}]
-dependencies = ["python-dotenv", "torch"] 
+dependencies = ["python-dotenv", "torch", "streamlit-echarts==0.4.0",
+    "streamlit-lottie==0.0.5"] 
 name = "sql_llm"
 requires-python = ">= 3.12"
 version = "0.1.0"

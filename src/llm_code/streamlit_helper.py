@@ -7,12 +7,15 @@ import streamlit as st
 import plotly.express as px
 from sqlglot import parse_one, exp
 from datetime import datetime
-from typing import Generator, Tuple, List
+from typing import Generator
+from streamlit_echarts import st_echarts
+import requests
 
 from src.constants import *
 from src.utils.logging import logger
-from .sql_gen_and_exec import generate_sql, execute_sql, generate_sql_chat, generate_sql_openrouterai, generate_summary_openrouterai, generate_sql_openai
-from src.prompts.prompts import prompt
+from .sql_gen_and_exec import generate_sql, execute_sql, generate_sql_openrouterai, generate_summary_openrouterai, generate_sql_openai
+from src.prompts.prompts import prompt, prompt_comparison
+from src.prompts.prompt_examples import two_month_examples, three_month_examples
 from .data_processor_and_loader import latest_month_year, data_loader
 
 
@@ -82,7 +85,7 @@ def render_contextual_reset_button():
                 st.sidebar.success("✅ Conversation reset! Start fresh.")
                 st.rerun()
 
-def greetor():
+def greeter():
     if not st.session_state.greeted:
         with st.chat_message("assistant"):
             st.write_stream(greet_generator())
@@ -113,8 +116,18 @@ def greet_generator() -> Generator[str, None, None]:
     ]
     return stream_response(random.choice(greetings))
 
+def question_exist_generator()  -> Generator[str, None, None]:
+    """Generate Month if exsist"""
+    month_exsist = [
+        "Please select the month and year from the dropdown instead of typing it manually and Try Again.",
+        "Please don't enter the month manually in the question, choose it from the given dropdown.",
+        "Make sure to pick the options from the given dropdown instead of typing them out. Thanks",
+        "Could you please use the provided filters to narrow down the results instead of free-text input?"
+    ]
+    return stream_response(random.choice(month_exsist))
+
 def check_specific_word(question):
-    list_words = ["assortment", "productivity", "stockout", "stockouts"]
+    list_words = ["assortment", "productivity", "stockout", "stockouts", "assortments"]
     for word in list_words:
         if word in question.lower():
             return word
@@ -163,120 +176,74 @@ def write_question(user_question: str) -> Generator[str, None, None]:
     ]
     return stream_response(random.choice(prefixes) + f"**{user_question}**")
 
-
 def display_chart_analytics(df: pd.DataFrame, unique_key, is_editable=True):
-    """Elegant interactive bar chart with highlight, hover, and percentage handling."""
+    """Interactive bar chart using Apache ECharts in Streamlit."""
 
     if df is None or not isinstance(df, pd.DataFrame) or df.empty:
         st.warning("No data available for chart visualization.")
         return None, None, unique_key
 
     df.columns = [convert_to_readable_format_simple(col) for col in df.columns]
-    non_numeric_columns, all_numeric_columns, percentage_columns = process_columns(df)
+    df = df.rename(columns=lambda col: col.title() if isinstance(col, str) else col)
+
+    non_numeric_columns, all_numeric_columns, _ = process_columns(df)
+
+    for col in df.columns:
+        if "percentage" in col.lower():
+                df[col] = df[col].apply(lambda x: f"{int(x)} %" if x == int(x) else f"{round(x, 1)} %" if len(str(x).split(".")[1]) == 1 else f"{round(x, 2)} %" if pd.notna(x) else x)
 
     if not non_numeric_columns or not all_numeric_columns:
         st.warning("Insufficient data for chart.")
         return None, None, unique_key
 
-    # -- Chart Config UI
     st.write("##### ⚙️ Chart Settings")
     col1, col2 = st.columns(2)
     with col1:
-        x_axis = st.selectbox("X-Axis (Dimension)", non_numeric_columns, key=f"x_axis_{unique_key}", disabled=not is_editable)
+        x_axis = st.selectbox(
+            "X-Axis (Dimension)",
+            non_numeric_columns,
+            key=f"x_axis_{unique_key}",
+            disabled=not is_editable
+        )
     with col2:
-        highlight_col = st.selectbox("Highlight Metric", ["All"] + all_numeric_columns, key=f"highlight_col_{unique_key}", disabled=not is_editable)
+        highlight_col = st.selectbox(
+            "Highlight Metric",
+            ["All"] + all_numeric_columns,
+            key=f"highlight_col_{unique_key}",
+            disabled=not is_editable
+        )
 
     if not x_axis:
         st.info("Please select a valid X-Axis to view chart.")
         return None, None, unique_key
 
-    df_chart = df.copy()
-    y_axis_cols, y_labels_map = [], {}
+    # ✅ Prepare chart data
+    x_data = df[x_axis].astype(str).tolist()
+    series = []
 
     for col in all_numeric_columns:
-        col_clean = col.strip()
-        if "percentage" in col_clean.lower():
-            new_col = f"{col_clean}_numeric"
-            df_chart[new_col] = df_chart[col_clean].astype(float)
-            y_labels_map[new_col] = col_clean
-            y_axis_cols.append(new_col)
-        else:
-            y_axis_cols.append(col_clean)
+        y_data = df[col].fillna(0).tolist()
+        opacity = 1.0 if highlight_col == "All" or highlight_col == col else 0.5
+        series.append({
+            "name": col,
+            "type": "bar",
+            "data": y_data,
+            "emphasis": {"focus": "series"},
+            "itemStyle": {"opacity": opacity}
+        })
 
-    try:
-        fig = px.bar(
-            df_chart,
-            x=x_axis,
-            y=y_axis_cols,
-            barmode="group",
-            title=f"📊 Metrics by {x_axis.title()}",
-            color_discrete_sequence=px.colors.qualitative.Set2,
-        )
+    option = {
+        "tooltip": {"trigger": "axis"},
+        "legend": {"data": all_numeric_columns},
+        "xAxis": {"type": "category", "data": x_data, "name": x_axis.title()},
+        "yAxis": {"type": "value", "name": "Metric Value"},
+        "series": series,
+        "grid": {"left": "3%", "right": "4%", "bottom": "3%", "containLabel": True}
+    }
 
-        for trace in fig.data:
-            orig_name = trace.name
-            trace.opacity = 1.0 if highlight_col == "All" or orig_name == highlight_col else 0.5
+    st_echarts(options=option, height="520px", key=f"echart_{unique_key}")
 
-        for trace in fig.data:
-            name = trace.name
-            col = y_labels_map.get(name, name)
-            values = df_chart[name] if name in df_chart.columns else []
-            is_pct = "percentage" in col.lower()
-
-            # Show text only if value is reasonably large (auto adapts to filtered data)
-            text = []
-            text_position = []
-
-            for val in values:
-                if is_pct:
-                    if val >= 10:  # >=10% visible inside the bar
-                        text.append(f"{val:.1f}%")
-                        text_position.append("inside")
-                    elif val >= 5:  # between 5%-10% visible but no text
-                        text.append("")
-                        text_position.append("none")
-                    else:  # hide completely
-                        text.append("")
-                        text_position.append("none")
-                else:
-                    if val >= 1000:  # big numeric values
-                        text.append(f"{val:,.0f}")
-                        text_position.append("auto")
-                    elif val >= 100:
-                        text.append(f"{val:,.0f}")
-                        text_position.append("inside")
-                    else:
-                        text.append("")
-                        text_position.append("none")
-
-            trace.text = text
-            trace.textposition = text_position
-            trace.textfont = dict(size=13, color="black")
-
-            trace.hovertemplate = (
-                f"<b>{col}</b><br>{x_axis}: %{{x}}<br>Value: %{{y:.1f}}%" if is_pct
-                else f"<b>{col}</b><br>{x_axis}: %{{x}}<br>Value: %{{y:,.0f}}"
-            )
-
-        fig.update_layout(
-            height=520,
-            yaxis_title="Metric Value",
-            xaxis_title=x_axis.title(),
-            legend=dict(orientation="h", x=0.3, xanchor="center", y=-0.1),
-            title_font=dict(size=10, family="Arial", color="#333"),
-            bargap=0.2,
-            hovermode="closest",
-            plot_bgcolor="rgba(250,250,255,0.9)",
-            paper_bgcolor="white",
-        )
-
-        st.plotly_chart(fig, use_container_width=True, key=f"plot_{unique_key}")
-        return fig, {"x_axis": x_axis, "highlight_column": highlight_col}, unique_key
-
-    except Exception as e:
-        st.error(f"Chart error: {e}")
-        return None, None, unique_key
-
+    return option, {"x_axis": x_axis, "highlight_column": highlight_col}, unique_key
 
 def display_chat_history():
     """Display chat history with preserved editable/non-editable state, including 'Why' analysis."""
@@ -416,7 +383,7 @@ def safe_to_numeric(val):
     except Exception:
         return val
 
-def process_columns(df: pd.DataFrame) -> Tuple[List[str], List[str], List[str]]:
+def process_columns(df: pd.DataFrame) -> tuple[list[str], list[str], list[str]]:
     """Processes columns to separate numeric and non-numeric columns, and identifies percentage columns."""
     df = df.replace(",", "", regex=True).apply(safe_to_numeric)
     non_numeric_columns = df.select_dtypes(exclude=["number"]).columns.tolist()
@@ -438,53 +405,18 @@ def convert_to_readable_format_simple(col_name):
     """Converts column from snake_case to a more readable Title Case format."""
     return col_name.replace("_", " ").title()
 
-def generate_enhanced_question(question: str) -> str:
+def generate_enhanced_question(question: str, latest_year) -> str:
     """Generates an enhanced question by determining GROUP BY clause and necessary calculations."""
-    keyword_groupby_map = {
-        r"\broute(s)?\b": "region, city, area, territory, distributor, route",
-        r"\bdistributor(s)?\b": "region, city, area, territory, distributor",
-        r"\bterritory|territories\b": "region, city, area, territory",
-        r"\barea(s)?\b": "region, city, area",
-        r"\bcity|cities\b": "region, city",
-        r"\bregion(s)?\b": "region",
-    }
-
-    metric_formulas = {
-        "stockout": """'COUNT(DISTINCT CASE WHEN month = given_month AND year = given_year AND stockout = 1 THEN customer END) AS stockout_shops,
-                      COUNT(DISTINCT CASE WHEN month = given_month AND year = given_year AND stockout = 0 THEN customer END) AS not_stockout_shops,
-                      COUNT(DISTINCT customer) AS total_shops, 
-                      (COUNT(DISTINCT CASE WHEN month = given_month AND year = given_year AND stockout = 1 THEN customer END) * 100.0 / COUNT(DISTINCT customer)) AS stockout_percentage,
-                      (COUNT(DISTINCT CASE WHEN month = given_month AND year = given_year AND stockout = 0 THEN customer END) * 100.0 / COUNT(DISTINCT customer)) AS no_stockout_percentage' see Example 2 and 3 """,
-        "productivity": """'COUNT(DISTINCT CASE WHEN month = given_month AND year = given_year AND productivity = 1 THEN customer END) AS productive_shops, 
-                        COUNT(DISTINCT CASE WHEN month = given_month AND year = given_year AND productivity = 0 THEN customer END) AS un_productive_shops,
-                        COUNT(DISTINCT customer) AS total_shops, 
-                        (COUNT(DISTINCT CASE WHEN month = given_month AND year = given_year AND productivity = 1 THEN customer END) * 100.0 / COUNT(DISTINCT customer)) AS productivity_percentage,
-                        (COUNT(DISTINCT CASE WHEN month = given_month AND year = given_year AND productivity = 0 THEN customer END) * 100.0 / COUNT(DISTINCT customer)) AS unproductivity_percentage' see Example 2 and 3 """,
-        "assortment": """'COUNT(DISTINCT CASE WHEN month = given_month AND year = given_year AND assortment = 1 THEN customer END) AS un_assorted_shops,
-                      COUNT(DISTINCT CASE WHEN month = given_month AND year = given_year AND assortment = 0 THEN customer END) AS assorted_shops, 
-                      COUNT(DISTINCT customer) AS total_shops, 
-                      (COUNT(DISTINCT CASE WHEN month = given_month AND year = given_year AND assortment = 1 THEN customer END) * 100.0 / COUNT(DISTINCT customer)) AS high_assortment_percentage,
-                      (COUNT(DISTINCT CASE WHEN month = given_month AND year = given_year AND assortment = 0 THEN customer END) * 100.0 / COUNT(DISTINCT customer)) AS low_assortment_percentage' see Example 2 and 3 """
-    }
 
     question_lower = question.lower()
     group_by_clause = ""
 
-    for pattern, group_by in keyword_groupby_map.items():
+    for pattern, group_by in KEYWORD_GROUPBY_MAP.items():
         if re.search(pattern, question_lower):
-            group_by_clause = f"strictly use SELECT {group_by} and GROUP BY {group_by} and always filter it by year and months"
+            group_by_clause = f"strictly use SELECT {group_by} and GROUP BY {group_by} and always filter it by months and year, and if year is missing, use {latest_year}. "
             break
 
-    formula_parts = [
-        formula
-        for keyword, formula in metric_formulas.items()
-        if keyword in question_lower
-    ]
-
-    if formula_parts:
-        return f"{group_by_clause} and also use this formula in the SELECT clause {', '.join(formula_parts)}, {question}"
-
-    return f"{group_by_clause if group_by_clause else 'strictly use SELECT and GROUP BY as defined and always filter it by year and months'},{question}"
+    return f"{group_by_clause if group_by_clause else f'strictly use SELECT and GROUP BY as defined and always filter it by year and months, and if year is missing, use {latest_year}'},{question}"
 
 def upated_cached_queries(question):
     st.session_state.cached_queries.append(question)
@@ -508,7 +440,7 @@ def display_table(df_result):
         df_readable.index = df_readable.index + 1
         st.dataframe(data=df_readable, use_container_width=True)
     else:
-        st.warning("No data available for the table.")
+        st.info("No Results Found Please Check Your Query, Thanks")
 
 def display_summary(df_result):
     """Display a summary of the DataFrame with percentage formatting."""
@@ -624,15 +556,29 @@ def get_why_result(result_df):
     sql_query = st.session_state.ex_sql
     last_col, last_col_values = get_last_non_numeric_column(result_df)
     year, month = extract_month_year_from_sql(sql_query)
+    limit = extract_limit_from_sql(sql_query)
+    print(f"LIMIT VALUE : {limit}")
 
     if not last_col:
         logger.info("No value for the 'WHY analysis")
         return pd.DataFrame()
 
-    why_question = f"Strictly retrieve only the following aggregates: SUM(mro) AS total_mro, SUM(unproductive_mro) AS total_unproductive_mro, SUM(unassorted_mro) AS total_unassorted_mro, SUM(stockout_mro) AS total_stockout_mro, should be based on the filtered data, also utilize SELECT and GROUP BY as defined below. The column is {last_col} with values are {last_col_values}, for the month {month} and year {year}."
-    # why_sql = generate_sql_chat(why_question, latest_month=LATEST_MONTH, latest_year=LATEST_YEAR, prompt=prompt)
-    why_sql = generate_sql_openrouterai(why_question, latest_month=LATEST_MONTH, latest_year=LATEST_YEAR, prompt=prompt)
-    # why_sql = generate_sql_openai(why_question, latest_month=LATEST_MONTH, latest_year=LATEST_YEAR, prompt=prompt)
+    why_question = f"""
+    Generate SQL to return:
+    SUM(mro) AS total_mro, 
+    SUM(unproductive_mro) AS total_unproductive_mro, 
+    SUM(unassorted_mro) AS total_unassorted_mro, 
+    SUM(stockout_mro) AS total_stockout_mro
+    FROM the same table.
+
+    Rules:
+    - SELECT and GROUP BY only {last_col}
+    - Use WHERE {last_col} IN ({', '.join(map(str, last_col_values))})
+    - AND month = {month} AND year = {year}
+    - LIMIT {limit if limit else 1}
+    Do not add OR, IS NULL, or extra conditions.
+    """
+    why_sql = generate_sql_openai(why_question, latest_month=LATEST_MONTH, latest_year=LATEST_YEAR, prompt=prompt)
     logger.info(f"This is WHY SQL : \n{why_sql}")
 
     # try:
@@ -661,53 +607,43 @@ def get_why_result(result_df):
 
     st.dataframe(df_why_result, use_container_width=True)
     return df_why_result
-    
-    # except Exception as e:
-    #     logger.error(f"Error generating percentages of 'Why' result: {e}")
-    #     st.write_stream(
-    #         stream_response("**An error occurred while generating the 'Why' results.**")
-    #     )
-    #     return pd.DataFrame()
 
 def extract_month_year_from_sql(sql_query):
     """Extract month and year from SQL WHERE clause and CASE WHEN statements."""
     try:
         expression = parse_one(sql_query)
-        month_values = []
-        year_values = []
+        month_values, year_values = [], []
 
+        def _extract_condition(expr):
+            if isinstance(expr, exp.EQ):
+                col = expr.left.name.lower()
+                val = expr.right.this
+                if col == "month":
+                    month_values.append(val)
+                elif col == "year":
+                    year_values.append(val)
+            elif isinstance(expr, exp.In):
+                col = expr.this.name.lower()
+                vals = [v.this for v in expr.expressions]
+                if col == "month":
+                    month_values.extend(vals)
+                elif col == "year":
+                    year_values.extend(vals)
+            elif isinstance(expr, exp.And):
+                for child in expr.flatten():
+                    _extract_condition(child)
+
+        # 1. WHERE clause
         where = expression.find(exp.Where)
         if where:
-            def _extract_condition(condition):
-                if isinstance(condition, exp.EQ):
-                    col = condition.left.name.lower()
-                    value = condition.right.this
-                    if col == "month":
-                        month_values.append(value)
-                    elif col == "year":
-                        year_values.append(value)
-                elif isinstance(condition, exp.In):
-                    col = condition.this.name.lower()
-                    values = [v.this for v in condition.expressions]
-                    if col == "month":
-                        month_values.extend(values)
-                    elif col == "year":
-                        year_values.extend(values)
+            for cond in where.iter_expressions():
+                _extract_condition(cond)
 
-            for condition in where.iter_expressions():
-                if isinstance(condition, exp.And):
-                    for child in condition.flatten():
-                        _extract_condition(child)
-                else:
-                    _extract_condition(condition)
-
+        # 2. CASE WHEN conditions
         for case_expr in expression.find_all(exp.Case):
-            for condition in case_expr.args.get("ifs", []):
-                if isinstance(condition.this, exp.And):
-                    for child in condition.this.flatten():
-                        _extract_condition(child)
-                else:
-                    _extract_condition(condition.this)
+            for when_clause in case_expr.args.get("ifs", []):  # list of exp.When
+                cond_expr = when_clause.this  # condition part of WHEN
+                _extract_condition(cond_expr)
 
         month = month_values[-1] if month_values else None
         year = year_values[-1] if year_values else None
@@ -715,4 +651,80 @@ def extract_month_year_from_sql(sql_query):
     except Exception as e:
         print(f"Error parsing SQL: {e}")
         return None, None
+
+def extract_limit_from_sql(sql_query):
+    """Extract LIMIT value from SQL query using sqlglot."""
+    try:
+        expression = parse_one(sql_query)
+        limit_exp = expression.find(exp.Limit)
+        if limit_exp:
+            # LIMIT value is usually in `this`
+            return int(limit_exp.expression.this)
+        return None
+    except Exception as e:
+        print(f"Error parsing SQL for LIMIT: {e}")
+        return None
+
+def get_comparison_year_month(df: pd.DataFrame):
+    """Get month/year comparison values (2 or 3 months based on user choice)."""
+    available_years = sorted(df.year.unique().tolist(), reverse=True)
+    available_months = sorted(df.month.unique().tolist())
+
+    print("Enter in the Comparison Query")
+
+    option = st.radio(
+        "Select Comparison Type",
+        ["Two Month Comparison", "Three Month Comparison"],
+        key="comparison_type_radio"
+    )
+
+    if option == "Two Month Comparison":
+        col1, col2, col3, col4 = st.columns(4)
+        with col1:
+            year1 = st.selectbox("Select First Year", available_years, key="year1")
+            month1 = st.selectbox("Select First Month", available_months, key="month1")
+        with col3:
+            year2 = st.selectbox("Select Second Year", available_years, key="year2")
+            month2 = st.selectbox("Select Second Month", available_months, key="month2")
+        return [(year1, month1), (year2, month2)]
+
+    elif option == "Three Month Comparison":
+        col1, col2, col3, col4, col5 = st.columns(5)
+        with col1:
+            year1 = st.selectbox("Year 1", available_years, key="year1")
+            month1 = st.selectbox("Month 1", available_months, key="month1")
+        with col3:
+            year2 = st.selectbox("Year 2", available_years, key="year2")
+            month2 = st.selectbox("Month 2", available_months, key="month2")
+        with col5:
+            year3 = st.selectbox("Year 3", available_years, key="year3")
+            month3 = st.selectbox("Month 3", available_months, key="month3")
+        return [(year1, month1), (year2, month2), (year3, month3)]
+
+def build_comparision_query(question: str, selections: list):
+
+    group_by_clause = ""
+    q_lower = question.lower()
+    for pattern, group_by in KEYWORD_GROUPBY_MAP.items():
+        if re.search(pattern, q_lower):
+            group_by_clause = f"strictly use SELECT {group_by} and GROUP BY {group_by}. "
+            break
     
+    if len(selections) == 2:
+        (year1, month1), (year2, month2) = selections
+        example_block = two_month_examples
+        enchanced_question = f"Compare between {month1}-{year1} and {month2}-{year2}, Questions : {question}" 
+    elif len(selections) == 3:
+        (year1, month1), (year2, month2), (year3, month3) = selections
+        example_block = three_month_examples
+        enchanced_question = f"Compare between {month1}-{year1}, {month2}-{year2}, and {month3}-{year3}, Questions : {question}"
+    
+    prompt_used = prompt_comparison + example_block
+    return enchanced_question, prompt_used
+
+# --- Load Lottie animation ---
+def load_lottie_url(url: str):
+    r = requests.get(url)
+    if r.status_code != 200:
+        return None
+    return r.json()
