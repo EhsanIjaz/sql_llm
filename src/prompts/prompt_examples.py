@@ -183,3 +183,100 @@ GROUP BY city
 ORDER BY productive_pct_sep DESC
 LIMIT 10;
 [/SQL]"""
+
+
+
+filter_two_examples = """
+Example 1:
+[SQL]
+SELECT distributor,
+  COUNT(DISTINCT CASE WHEN month = 3 AND year = 2025 AND stockout = 1 THEN customer END) AS stockout_shops_mar,
+  COUNT(DISTINCT CASE WHEN month = 3 AND year = 2025 AND stockout = 0 THEN customer END) AS not_stockout_shops_mar,
+  COUNT(DISTINCT CASE WHEN month = 3 AND year = 2025 THEN customer END) AS total_shops_mar,
+  (COUNT(DISTINCT CASE WHEN month = 3 AND year = 2025 AND stockout = 1 THEN customer END) * 100.0 /
+   NULLIF(COUNT(DISTINCT CASE WHEN month = 3 AND year = 2025 THEN customer END), 0)) AS stockout_pct_mar,
+
+  COUNT(DISTINCT CASE WHEN month = 4 AND year = 2025 AND stockout = 1 THEN customer END) AS stockout_shops_apr,
+  COUNT(DISTINCT CASE WHEN month = 4 AND year = 2025 AND stockout = 0 THEN customer END) AS not_stockout_shops_apr,
+  COUNT(DISTINCT CASE WHEN month = 4 AND year = 2025 THEN customer END) AS total_shops_apr,
+  (COUNT(DISTINCT CASE WHEN month = 4 AND year = 2025 AND stockout = 1 THEN customer END) * 100.0 /
+   NULLIF(COUNT(DISTINCT CASE WHEN month = 4 AND year = 2025 THEN customer END), 0)) AS stockout_pct_apr
+
+FROM llm_df
+WHERE year = 2025 AND month IN (3, 4)
+GROUP BY distributor
+ORDER BY stockout_pct_apr DESC;
+[/SQL]
+
+Example 2:
+[SQL]
+SELECT city,
+  COUNT(DISTINCT CASE WHEN month = 7 AND year = 2025 AND stockout = 1 THEN customer END) AS stockout_shops_jul,
+  COUNT(DISTINCT CASE WHEN month = 7 AND year = 2025 AND stockout = 0 THEN customer END) AS not_stockout_shops_jul,
+  COUNT(DISTINCT CASE WHEN month = 7 AND year = 2025 THEN customer END) AS total_shops_jul,
+  (COUNT(DISTINCT CASE WHEN month = 7 AND year = 2025 AND stockout = 1 THEN customer END) * 100.0 /
+   NULLIF(COUNT(DISTINCT CASE WHEN month = 7 AND year = 2025 THEN customer END), 0)) AS stockout_pct_jul,
+
+  COUNT(DISTINCT CASE WHEN month = 8 AND year = 2025 AND stockout = 1 THEN customer END) AS stockout_shops_aug,
+  COUNT(DISTINCT CASE WHEN month = 8 AND year = 2025 AND stockout = 0 THEN customer END) AS not_stockout_shops_aug,
+  COUNT(DISTINCT CASE WHEN month = 8 AND year = 2025 THEN customer END) AS total_shops_aug,
+  (COUNT(DISTINCT CASE WHEN month = 8 AND year = 2025 AND stockout = 1 THEN customer END) * 100.0 /
+   NULLIF(COUNT(DISTINCT CASE WHEN month = 8 AND year = 2025 THEN customer END), 0)) AS stockout_pct_aug
+
+FROM llm_df
+WHERE year = 2025 AND month IN (7, 8)
+GROUP BY city
+ORDER BY stockout_pct_aug DESC;
+[/SQL]
+"""
+
+
+filter_three_examples = """
+Example 1:
+[SQL]
+SELECT region,
+  COUNT(DISTINCT CASE WHEN month = 1 AND year = 2025 AND stockout = 1 THEN customer END) AS stockout_shops_jan,
+  COUNT(DISTINCT CASE WHEN month = 1 AND year = 2025 THEN customer END) AS total_shops_jan,
+  (COUNT(DISTINCT CASE WHEN month = 1 AND year = 2025 AND stockout = 1 THEN customer END) * 100.0 /
+   NULLIF(COUNT(DISTINCT CASE WHEN month = 1 AND year = 2025 THEN customer END), 0)) AS stockout_pct_jan,
+
+  COUNT(DISTINCT CASE WHEN month = 2 AND year = 2025 AND stockout = 1 THEN customer END) AS stockout_shops_feb,
+  COUNT(DISTINCT CASE WHEN month = 2 AND year = 2025 THEN customer END) AS total_shops_feb,
+  (COUNT(DISTINCT CASE WHEN month = 2 AND year = 2025 AND stockout = 1 THEN customer END) * 100.0 /
+   NULLIF(COUNT(DISTINCT CASE WHEN month = 2 AND year = 2025 THEN customer END), 0)) AS stockout_pct_feb,
+
+  COUNT(DISTINCT CASE WHEN month = 3 AND year = 2025 AND stockout = 1 THEN customer END) AS stockout_shops_mar,
+  COUNT(DISTINCT CASE WHEN month = 3 AND year = 2025 THEN customer END) AS total_shops_mar,
+  (COUNT(DISTINCT CASE WHEN month = 3 AND year = 2025 AND stockout = 1 THEN customer END) * 100.0 /
+   NULLIF(COUNT(DISTINCT CASE WHEN month = 3 AND year = 2025 THEN customer END), 0)) AS stockout_pct_mar
+
+FROM llm_df
+WHERE year = 2025 AND month IN (1, 2, 3)
+GROUP BY region
+ORDER BY stockout_pct_mar DESC;
+[/SQL]
+
+Example 2:
+[SQL]
+SELECT territory,
+  COUNT(DISTINCT CASE WHEN month = 10 AND year = 2025 AND stockout = 1 THEN customer END) AS stockout_shops_oct,
+  COUNT(DISTINCT CASE WHEN month = 10 AND year = 2025 THEN customer END) AS total_shops_oct,
+  (COUNT(DISTINCT CASE WHEN month = 10 AND year = 2025 AND stockout = 1 THEN customer END) * 100.0 /
+   NULLIF(COUNT(DISTINCT CASE WHEN month = 10 AND year = 2025 THEN customer END), 0)) AS stockout_pct_oct,
+
+  COUNT(DISTINCT CASE WHEN month = 11 AND year = 2025 AND stockout = 1 THEN customer END) AS stockout_shops_nov,
+  COUNT(DISTINCT CASE WHEN month = 11 AND year = 2025 THEN customer END) AS total_shops_nov,
+  (COUNT(DISTINCT CASE WHEN month = 11 AND year = 2025 AND stockout = 1 THEN customer END) * 100.0 /
+   NULLIF(COUNT(DISTINCT CASE WHEN month = 11 AND year = 2025 THEN customer END), 0)) AS stockout_pct_nov,
+
+  COUNT(DISTINCT CASE WHEN month = 12 AND year = 2025 AND stockout = 1 THEN customer END) AS stockout_shops_dec,
+  COUNT(DISTINCT CASE WHEN month = 12 AND year = 2025 THEN customer END) AS total_shops_dec,
+  (COUNT(DISTINCT CASE WHEN month = 12 AND year = 2025 AND stockout = 1 THEN customer END) * 100.0 /
+   NULLIF(COUNT(DISTINCT CASE WHEN month = 12 AND year = 2025 THEN customer END), 0)) AS stockout_pct_dec
+
+FROM llm_df
+WHERE year = 2025 AND month IN (10, 11, 12)
+GROUP BY territory
+ORDER BY stockout_pct_dec DESC;
+[/SQL]
+"""

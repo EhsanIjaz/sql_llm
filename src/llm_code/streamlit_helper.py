@@ -13,7 +13,7 @@ from src.constants import *
 from src.utils.logging import logger
 from .sql_gen_and_exec import execute_sql, generate_sql_openai
 from src.prompts.prompts import prompt, prompt_comparison
-from src.prompts.prompt_examples import two_month_examples, three_month_examples
+from src.prompts.prompt_examples import two_month_examples, three_month_examples, filter_two_examples, filter_three_examples
 from .data_processor_and_loader import latest_month_year, data_loader
 
 
@@ -711,11 +711,21 @@ def build_comparision_query(question: str, selections: list):
     
     if len(selections) == 2:
         (year1, month1), (year2, month2) = selections
-        example_block = two_month_examples
+
+        if check_specific_word(question):
+            example_block = filter_two_examples
+        else:
+            example_block = two_month_examples
+
         enchanced_question = f"Compare between {month1}-{year1} and {month2}-{year2}, Questions : {question}" 
     elif len(selections) == 3:
         (year1, month1), (year2, month2), (year3, month3) = selections
-        example_block = three_month_examples
+        
+        if check_specific_word(question):
+            example_block = filter_three_examples
+        else:
+            example_block = three_month_examples
+        
         enchanced_question = f"Compare between {month1}-{year1}, {month2}-{year2}, and {month3}-{year3}, Questions : {question}"
     
     prompt_used = prompt_comparison + example_block
